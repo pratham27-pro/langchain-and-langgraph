@@ -1,0 +1,66 @@
+from typing import List
+
+from dotenv import load_dotenv
+from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage
+from langchain_core.tools import tool, Tool
+from langchain_openai import ChatOpenAI
+
+from reAct_Agents.callbacks import AgentCallbackHandler
+
+load_dotenv()
+
+@tool
+def get_text_length(text: str) -> int:
+    """"Returns the length of a text by characters."""
+    print(f"get_text_length entered with {text=}")
+    text = text.strip("'\n").strip('"')
+    return len(text)
+
+
+def find_tool_by_name(tools, name):
+    for tool in tools:
+        if tool.name == name:
+            return tool
+    raise ValueError(f"Tool with name {name} not found")
+
+if __name__ == "__main__":
+    print("Hello Langchain Tools (.bind-tools())")
+    tools = [get_text_length]
+
+    llm = ChatOpenAI(
+        temperature=0,
+        callbacks=[AgentCallbackHandler()]
+    )
+
+    llm_with_tools = llm.bind_tools(tools)
+
+    # Start conversation
+    messages: List[BaseMessage] = [
+        HumanMessage(content="What is the length of the word 'DOG'?")
+    ]
+
+    while True:
+        ai_message = llm_with_tools.invoke(messages)
+
+    # If the model decides to call tools, execute them and return results
+        tools_calls = getattr(ai_message, "tool_calls", None) or []
+        if len(tools_calls) > 0:
+            messages.append(ai_message)
+            for tool_call in tools_calls:
+                # tool_call is typically a dict with keys: id, type, name, args
+                tool_name = tool_call.get("name")
+                tool_args = tool_call.get("args", {})
+                tool_call_id = tool_call.get("id")
+
+                tool_to_use = find_tool_by_name(tools, tool_name)
+                observation = tool_to_use.invoke(input=tool_args)
+                print(f"Observation from tool call {tool_call_id}: {observation}")
+
+                messages.append(ToolMessage(content=observation, tool_call_id=tool_call_id))
+
+            # Continue the loop to allow the model to use the observations
+            continue
+
+        # no tool calls -> final answer
+        print(ai_message.content)
+        break

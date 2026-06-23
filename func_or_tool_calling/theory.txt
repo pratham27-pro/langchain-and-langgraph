@@ -1,0 +1,9 @@
+A function calling or tool calling refers to the model's ability to produce a structured function call to an external function with its arguments.
+
+It's going to leverage the LLM's reasoning capabilities to extract information in certain fields and return it in a very organized JSON.
+
+Its advantages -
+1. Structured and reliable integration.
+2. Efficiency and token cost savings
+3. Developer convenience
+4. Structured flow.
